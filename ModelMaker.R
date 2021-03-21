@@ -11,7 +11,7 @@ for(file in files){
   fileName <- paste0(str_sub(paste0(file), 1, nchar(paste0(file))-8), ".png")
   
   #read and filter the data
-  df <- read.csv(file)
+  df1 <- df <- read.csv(file)
   colnames(df)[3] = "time"
   date <- df %>%
     filter(!(time == ""), !(time == "20d"))
@@ -30,10 +30,11 @@ for(file in files){
   time <- as.character(abs(as.numeric(difftime(t1, t2, units = "secs"))))
   
   #selecting and filtering the pH data and reassigning it into the "dataframe"
-  df <- df %>%
-    select(c(5))
-  colnames(df) <- "pH"
-  df <- filter(df, !(pH == ""), !(pH == "14n"))
+  df <- df1 %>%
+    select(5, 6)
+  colnames(df) <- c("pH", "ap")
+  df <- filter(df, !(pH == ""), !(pH == "14n"), !(ap == "P")) %>%
+    select(1)
   
   #"unlisting" the df and converting the pH values into numerics.
   phVal <- as.numeric(as.character(unlist(df)))
@@ -69,4 +70,3 @@ for(file in files){
   sendfile <- ggsave(fileName, width=16, height=9, units="cm")
   drive_upload(fileName, path="~/Data Sets - pH2O Analytics/Datasets/Models/", name=fileName)
 }
-
