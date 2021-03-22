@@ -2,7 +2,6 @@
 library("tidyverse")
 library("ggpubr")
 library("googledrive")
-library("dplyr")
 library("DescTools")
 
 #create a list of all the files in the working directory
