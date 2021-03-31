@@ -3,12 +3,13 @@ library("tidyverse")
 library("ggpubr")
 library("googledrive")
 library("DescTools")
+library("scales")
 
 #create a list of all the files in the working directory
 files <- list.files(pattern = ".*csv")
 
 #creating a dataframe with 10 columns and the the length of files rows.
-stats <- data.frame(matrix(ncol = 10, nrow = length(files)))
+stats <- data.frame(matrix(ncol = 14, nrow = length(files)))
 colnames(stats) <-
   c(
     "Name",
@@ -20,8 +21,19 @@ colnames(stats) <-
     "IQR",
     "EST pH in 5 Years",
     "EST pH in 10 Years",
-    "Change in 5 Years"
+    "Change in 5 Years",
+    "Starting Date",
+    "Ending Date",
+    "Data Points",
+    "Increment"
   )
+
+#used for ticks
+f <- function(x) {
+  x <- as.character(x)
+  x <- as.POSIXct(x, format = "%m/%d/%Y %H:%M", tz = Sys.timezone())
+  return(x)
+}
 
 #calculates difference in time
 timeDiff <- function(x) {
@@ -73,6 +85,10 @@ for (r in 1:length(files)) {
     filter(!(time == ""), !(time == "20d"), !(ap == "P"))
   
   time <- timeDiff(date)
+  date <- mutate(date, dt = f(time))
+  
+  ticks <- as.vector(date$dt)
+  class(ticks) <- c("POSIXct")
   
   #"unlisting" the df and converting the pH values into numeric.
   df <- df %>%
@@ -86,8 +102,7 @@ for (r in 1:length(files)) {
   
   #increment
   inc <- seq_along(phVal)
-  df <- as.data.frame(phVal) %>%
-    cbind(inc)
+  df <- as.data.frame(phVal)
   
   #fills the stats dataframe with stats
   stats[r, 1] = fileName
@@ -100,9 +115,13 @@ for (r in 1:length(files)) {
   stats[r, 8] = getCof(inc, phVal, 1)
   stats[r, 9] = getCof(inc, phVal, 2)
   stats[r, 10] = getCof(inc, phVal, 3)
+  stats[r, 11] = date[1, 3]
+  stats[r, 12] = date[nrow(date), 3]
+  stats[r, 13] = nrow(date)
+  stats[r, 14] = time
   
   #creating a plot
-  plot <- ggplot(data = df, aes(x = inc, y = phVal)) +
+  plot <- ggplot(data = df, aes(x = ticks, y = phVal)) +
     
     geom_smooth(color = "black",
                 alpha = .7) +
@@ -115,10 +134,12 @@ for (r in 1:length(files)) {
       title = "pH Change Over Time",
       subtitle = "pH2O Analytics",
       caption = fileName,
-      x = paste0("Time ", paste0("(Inc = ", time, "s)
-  First Date:", date[1, 3])),
+      x = paste0("Time\n", paste0("First and Last Dates: ",
+                                 date[1, 3])," to ", date[nrow(date), 3]),
       y = "pH Level"
     ) +
+    
+    scale_x_datetime(date_breaks = "1 year", date_labels = "%Y") +
     
     theme_light() +
     
@@ -131,19 +152,17 @@ for (r in 1:length(files)) {
     )
   
   #saving the file to a png and forwarding it to google drive
-  sendfile <- ggsave(
-    paste0(fileName, ".png"),
-    width = 16,
-    height = 9,
+  sendfile <- ggsave(paste0(fileName, ".png"), width = 16, height = 9,
     units = "cm"
   )
   drive_upload(paste0(fileName, ".png"),
                path = "~/Data Sets - pH2O Analytics/Datasets/Models/",
-               name = fileName)
+               name = fileName,
+               overwrite = TRUE)
   
 }
 
-#writing stats to a csv
+# writing stats to a csv
 write.csv(stats, "Model Statistics.csv")
 drive_upload(
   "Model Statistics.csv",
