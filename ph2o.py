@@ -12,6 +12,7 @@ for file in files:
     usecols=[2, 4], 
     skiprows= lambda x: 2 if x == 2 else x%2 == 1, 
     parse_dates=["datetime"], 
-    date_parser=lambda x: pd.to_datetime(x, format="%m/%d/%Y %H:%M"))
+    date_parser=lambda x: pd.to_datetime(x, format="%m/%d/%Y %H:%M"),
+    index_col=["datetime"])
 
 files = np.array(files, dtype=pd.DataFrame)
